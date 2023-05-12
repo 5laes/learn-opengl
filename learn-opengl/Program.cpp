@@ -15,25 +15,49 @@ int main() {
 	// We store this as a string for the moment, we are gonna compile this in GLSL later
 	const char* vertexShaderSource = "#version 460 core\n"
 		"layout (location = 0) in vec3 aPos;\n"
+		"layout (location = 1) in vec3 aColor;\n"
+		"out vec3 ourColor;\n"
+		//"out vec4 vertexColor1;\n"
+		//"out vec4 vertexColor2;\n"
 		"void main()\n"
 		"{\n"
-		"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+		"   gl_Position = vec4(aPos, 1.0);\n"
+		"	ourColor = aColor;\n"
+		//"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+		//"   vertexColor1 = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+		//"   vertexColor2 = vec4(1.0f, 1.0f, 0.0f, 1.0f);\n"
 		"}\0";
 
 	// Fragment shader same as above (draws the color)
-	const char* fragmentShaderSource = "#version 330 core\n"
+	const char* fragmentShaderSource = "#version 460 core\n"
 		"out vec4 FragColor;\n"
+		"in vec3 ourColor;\n"
+		//"in vec4 vertexColor1;\n"
+		//"uniform vec4 ourColor1;\n"
 		"void main()\n"
 		"{\n"
-		"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+		"   FragColor = vec4(ourColor, 1.0);\n"
 		"}\n\0";
 
-	const char* fragmentShaderSource2 = "#version 330 core\n"
+	const char* fragmentShaderSource2 = "#version 460 core\n"
 		"out vec4 FragColor;\n"
+		//"in vec4 vertexColor2;\n"
+		"uniform vec4 ourColor2;\n"
 		"void main()\n"
 		"{\n"
-		"   FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);\n"
+		"   FragColor = ourColor2;\n"
 		"}\n\0";
+
+	// GLSL code is simiular to C. on thing is that GLSL have two container types vectors and matrices
+	// the vector type contains 2,3 or 4 components of any basic type where vecn(float vector) is the common one
+	// vecn can access the components with vecn.x vecn.y vecn.z and vecn.w
+	// 
+	// You can pass data from one "string" to another with the out and in keywords. the needs to be of same type and name
+	//
+	// uniforms is another way to pass data from the app to the shaders but this is global meaning
+	// it can be accessed from any shader at any stage in the program and is unique per shahder program object
+	// whenever you set a value for the uniform it save that value until it is either chenged or reset
+
 
 	// Initializes GLFW
 	glfwInit();
@@ -192,6 +216,24 @@ int main() {
 	glDeleteShader(fragmentShader2);
 	//--------------------------^^^Shaders2^^^-------------------------------------
 
+	// Two triangles next to eachother
+	//float triangle1[] = {
+	//	-0.9f, -0.5f, 0.0f, // bot left
+	//	-0.1f, -0.5f, 0.0f, // bot right
+	//	-0.5f,  0.5f, 0.0f, //top
+	//};
+	//float triangle2[] = {
+	//	 0.1f, -0.5f, 0.0f, // bot left
+	//	 0.9f, -0.5f, 0.0f, // bot right
+	//	 0.5f,  0.5f, 0.0f //top
+	//};
+
+	float vertices[] = {
+		// positions         // colors
+		 0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // bottom right
+		-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // bottom left
+		 0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // top 
+	};
 
 	// Vertices points of the two triangles
 	//float vertices[] = {
@@ -201,24 +243,13 @@ int main() {
 	//	-0.5f,  0.5f, 0.0f   // top left 
 	//};
 
-	// Two triangles next to eachother
-	float vertices[] = {
-		-0.9f, -0.5f, 0.0f, // bot left
-		-0.1f, -0.5f, 0.0f, // bot right
-		-0.5f,  0.5f, 0.0f, //top
-	};
-	float vertices2[] = {
-		 0.1f, -0.5f, 0.0f, // bot left
-		 0.9f, -0.5f, 0.0f, // bot right
-		 0.5f,  0.5f, 0.0f //top
-	};
 
 	// Points where the triangles should be drawn in between (index drawing)
 	// because of this we only need 4 vertices instead of 6 and reduces overlap
-	unsigned int indices[] = {  // note that we start from 0!
-		0, 1, 3,   // first triangle
-		1, 2, 3    // second triangle
-	};
+	//unsigned int indices[] = {  // note that we start from 0!
+	//	0, 1, 3,   // first triangle
+	//	1, 2, 3    // second triangle
+	//};
 
 	// (VBO)Vertex buffer object. used to store large amount of vertices to send at the same time to the CPU.
 	// Since it is a slow process to send to the CPU we want to send as much data at the same time
@@ -250,22 +281,26 @@ int main() {
 	// GL_STATIC_DRAW sets the data once and is used many times
 	// GL_DYNAMIC_DRAW the data changes a lot and is used many times
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	// Position attributes
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
+	// Color attributes
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+	glEnableVertexAttribArray(1);
 
 	// For second triangle
 	// this need to be done for every new VAO and VBO
-	glBindVertexArray(VAOs[1]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
+	//glBindVertexArray(VAOs[1]);
+	//glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(triangle2), triangle2, GL_STATIC_DRAW);
+	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	//glEnableVertexAttribArray(0);
 
 
 
 	// Same as above but for EBO
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 
 
@@ -276,7 +311,7 @@ int main() {
 	// We specifies the data type as float
 	// If we want nomalaized data to be used we use GL_TRUE
 	// Fifth argument is the "stride" it's the distance from one point to another in bytes
-	// The last parameter is the offset off where position data begins
+	// The last parameter is the offset off where another stride (for color for example) begins
 	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	//glEnableVertexAttribArray(0);
 
@@ -307,6 +342,19 @@ int main() {
 		
 		// Draws the triangle
 		glUseProgram(shaderProgram);
+
+		// Retrieves the running time in seconds
+		float timeValue1 = glfwGetTime();
+
+		// gets a color value from a sin curve
+		float colorValue1 = (sin(timeValue1) / 2.0f) + 0.5f;
+
+		// Gets the "ourColor" location 
+		int vertexColorLocation1 = glGetUniformLocation(shaderProgram, "ourColor1");
+
+		// Sets the value of "ourColor". By using "colorValue" the shader "pulses"
+		// glUniform4f is an overload of glUniform
+		glUniform4f(vertexColorLocation1, 0.0f, colorValue1, 0.0f, 1.0f);
 		glBindVertexArray(VAOs[0]);
 
 		// Draws the first triangle from the latest binded VAO
@@ -316,6 +364,10 @@ int main() {
 		// we first need to create the different shader
 		// Then we need to call the different shader per different triangle
 		glUseProgram(shaderProgram2);
+		float timeValue2 = glfwGetTime();
+		float colorValue2 = (cos(timeValue2) / 2.0f) + 0.5f;
+		int vertexColorLocation2 = glGetUniformLocation(shaderProgram2, "ourColor2");
+		glUniform4f(vertexColorLocation2, colorValue2, 0.0f, 0.0f, 1.0f);
 		glBindVertexArray(VAOs[1]);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
