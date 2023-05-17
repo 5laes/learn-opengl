@@ -3,6 +3,8 @@
 #include <iostream>
 #include "Shaders.h"
 #include "stb_image.h"
+
+//math functions for matrices
 #include <glm/glm/glm.hpp>
 #include <glm/glm/gtc/matrix_transform.hpp>
 #include <glm/glm/gtc/type_ptr.hpp>
@@ -201,6 +203,7 @@ int main() {
 	}
 	stbi_image_free(data);
 
+
 	// tells each uniform sampler in the fragment shader which texture unit they belong to (only has to be done once hence why it is out of the render loop)  
 	ourShader.use();
 	// manualy like this 
@@ -217,6 +220,11 @@ int main() {
 		// Function for closing the window with ESC
 		processInput(window);
 
+		// moves the object on the screen
+		ourShader.setFloat("xOffset", xOffset);
+		ourShader.setFloat("yOffset", yOffset);
+		ourShader.setFloat("blendScale", blendScale);
+
 
 		// Rendering commands below here:
 
@@ -230,22 +238,35 @@ int main() {
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, texture2);
 
-		ourShader.use();
 
-		//glUniform1i(glGetUniformLocation(ourShader.ID, "ourTexture1"), 0);
-		//ourShader.setInt("ourTexture1", 1);
 
-		// moves the object on the screen
-		ourShader.setFloat("xOffset", xOffset);
-		ourShader.setFloat("yOffset", yOffset);
-		ourShader.setFloat("blendScale", blendScale);
+		// Creates a transformation, and the initial matrix is set to identity matrix
+		glm::mat4 transform = glm::mat4(1.0f);
+		// Changes the position of the box by changin T in the matrix [ 1  0  0  T] by multiplying whats in the vec3 parameter
+		//															  [ 0  1  0  T]
+		//															  [ 0  0  1  T]
+		transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
+		transform = glm::rotate(transform, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+
+		// gets and sets the uniform transform variable so the shader will transform the box
+		unsigned int transformLoc = glGetUniformLocation(ourShader.ID, "transform");
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
 
 
 		glBindVertexArray(VAO);
-		// Draws the first triangle from the latest binded VAO
-		//glDrawArrays(GL_TRIANGLES, 0, 3);
-
 		// Draws the elements from EBO
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+		// Mostly the same as above
+		transform = glm::mat4(1.0f); // Reset the matrix to identity matrix
+		transform = glm::translate(transform, glm::vec3(-0.5f, 0.5f, 0.0f));
+		float scaleAmount = static_cast<float>(sin(glfwGetTime()));
+		// Changes the scale of the box by changing S in the matrix [ S  0  0  0] by multiplying whats in the vec3 parameter
+		//															[ 0  S  0  0]
+		//															[ 0  0  S  0]
+		transform = glm::scale(transform, glm::vec3(scaleAmount, scaleAmount, scaleAmount));
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, &transform[0][0]);
+
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 
